@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import {
-    Box, Button,
+    Alert, Box, Button,
     Container,
     FormControl,
     InputLabel,
@@ -27,10 +27,14 @@ const GenerateQuestions = () => {
     const [difficulty, setDifficulty] = useState('easy');
     const [numQuestions, setNumQuestions] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
 
     const handleSubmit = async (event) => {
         event.preventDefault();
+        if (!file) return;
+
         setLoading(true);
+        setError('');
         const formData = new FormData();
         formData.append('file', file);
         formData.append('questionType', questionType);
@@ -38,20 +42,19 @@ const GenerateQuestions = () => {
         formData.append('numQuestions', numQuestions);
 
         try {
-            const response = await axios.post('http://localhost:5000/generate/generate-questions', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-                responseType: 'blob', // To handle PDF response
+            const response = await api.post('/generate/generate-questions', formData, {
+                responseType: 'blob',
             });
-            // Create a URL for the PDF blob and open it in a new tab
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const url = window.URL.createObjectURL(response.data);
             const link = document.createElement('a');
             link.href = url;
             link.setAttribute('download', 'generated_questions.pdf');
             document.body.appendChild(link);
             link.click();
             link.remove();
-        } catch (error) {
-            console.error('Error generating questions:', error);
+            window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
+        } catch {
+            setError('Could not generate questions. Check the PDF and backend configuration, then try again.');
         } finally {
             setLoading(false);
         }
@@ -68,11 +71,12 @@ const GenerateQuestions = () => {
                     <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
                     Generate Questions
                     </Typography>
+                    {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
                     <Box component="form" onSubmit={handleSubmit} noValidate>
                     <Grid container spacing={3}>
                         <Grid item xs={12}>
                         <input
-                            accept=".pdf,.png,.txt"
+                            accept=".pdf,application/pdf"
                             style={{ display: 'none' }}
                             id="file-upload"
                             type="file"
@@ -85,7 +89,7 @@ const GenerateQuestions = () => {
                             startIcon={<CloudUploadIcon />}
                             fullWidth
                             >
-                            Upload File (PDF, PNG, or TXT)
+                            Upload File (PDF)
                             </Button>
                         </label>
                         {file && (
@@ -140,13 +144,16 @@ const GenerateQuestions = () => {
                             />
                             <TextField
                             value={numQuestions}
-                            onChange={(e) => setNumQuestions(Number(e.target.value))}
+                            onChange={(e) => {
+                                const value = Number(e.target.value);
+                                if (value >= 1 && value <= 20) setNumQuestions(value);
+                            }}
                             type="number"
                             InputProps={{ inputProps: { min: 1, max: 20 } }}
                             sx={{ width: 60 }}
                             />
                             <Tooltip title="Choose between 1 and 20 questions">
-                            <IconButton size="small" sx={{ ml: 1 }}>
+                            <IconButton size="small" sx={{ ml: 1 }} aria-label="Question count help">
                                 <HelpOutlineIcon />
                             </IconButton>
                             </Tooltip>
@@ -159,7 +166,7 @@ const GenerateQuestions = () => {
                             color="primary" 
                             fullWidth 
                             size="large"
-                            disabled={loading}
+                            disabled={loading || !file}
                         >
                             {loading ? <CircularProgress size={24} /> : 'Generate Questions'}
                         </Button>

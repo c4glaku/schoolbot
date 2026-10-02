@@ -1,47 +1,61 @@
-# schoolbot
-RAG System complete with a react frontend for generating questions/grading assignments given context
+# SchoolBot
 
-# Setup
-## Step 0 - Prerequisites:
-Install node from https://nodejs.org/en/download if it's not already installed.
-## Step 1 - Installation:
-From the root directory, open a bash terminal and run:
+SchoolBot is a React application for creating questions from course PDFs and generating feedback on student submissions. The existing Material UI screens and light/dark themes are retained.
 
-```bash 
+## Project status
+
+- The Express API and React interface are the active application.
+- Question generation accepts text-based PDFs, creates up to 20 multiple-choice or short-answer questions, and returns a PDF.
+- Grading accepts up to five text-based PDFs and returns feedback for each one.
+- AI features require an OpenAI API key. The default model is `gpt-6-luna`; set `OPENAI_MODEL` to use another model available to your API account.
+- Scanned PDFs without selectable text are not OCR processed. The experimental `backend/ml_service.py` is not called by the Node API and is not part of the install or test path.
+- The app does not include user accounts or authentication.
+
+## Requirements
+
+- Node.js 22.12 or newer
+- npm
+- An OpenAI API key for question generation and grading
+
+## Setup
+
+Install dependencies from the repository root:
+
+```bash
 npm install
 ```
-Once installation is complete, repeat this in both frontend and backend directories, installation will take some time.
-###### Note: There will probably be some warnings, as this project is currently incomplete, and not a complete production version, these are normal, you may attempt to simple fix these warnings by following the directions outputted to the console, these warnings themselves do not affect how well the project runs.
 
-## Step 2 - Environment Setup:
-In the backend directory, create a new file ".env":
+Create `backend/.env` with your API key:
 
-```bash 
-touch .env
+```env
+OPENAI_API_KEY=your_api_key
+OPENAI_MODEL=gpt-6-luna
+PORT=5000
 ```
 
-Add your OpenAI API key, as the project currently leverages OpenAI's ChatGPT for RAG operations.
+The previous `OPENAI_KEY` variable remains supported. Keep API keys in the backend environment; never add them to frontend variables.
 
-You can get an API key from https://platform.openai.com/api-keys.
+Run the API and frontend in separate terminals from the repository root:
 
-Configure the .env file to have a variable "OPENAI_KEY", as the project currently relies on the name of this variable, make sure it matches the below format:
-
-```example
-OPENAI_KEY="sk-proj-xxxx..."
-```
-## Step 3 - Running the Application:
-At this point, you can run the application and use it to your content!
-
-To run the app, first, through a bash terminal, run the following command in the backend directory:
-
-```
-node server
+```bash
+npm run dev:backend
 ```
 
-Once the message ```Server running on port 5000``` is displayed on the terminal, go to the frontend directory, open a second terminal window and run the below command:
-
-```
-npm start
+```bash
+npm run dev:frontend
 ```
 
-After a few seconds, a browser window will pop up with the application ready to use.
+Vite serves the frontend at `http://localhost:5173` and forwards `/api` requests to the Express API on port 5000. To use a separately hosted API, set `VITE_API_BASE_URL` to its URL when building the frontend.
+
+## Tests and production build
+
+```bash
+npm test
+npm run build
+```
+
+Backend unit tests use Node's built-in test runner. Frontend tests use Vitest and React Testing Library. Tests stub AI responses and do not require an API key.
+
+## Upload limits
+
+The API accepts PDFs up to 10 MB. Grading accepts at most five files per request. Question generation samples up to 20 sections across a PDF and uses one model request for the requested question set. Grading runs one request per submission, concurrently.

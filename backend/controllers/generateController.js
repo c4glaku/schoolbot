@@ -1,52 +1,49 @@
+const PDFDocument = require('pdfkit');
 const { generateQuestions } = require('./questionGenerator');
-const pdf = require('html-pdf');
-const fs = require("fs");
 
-exports.generateQuestions = async (req, res) => {
-    const filePath = req.file.path;
-    
-    try {
-        console.log('Request received:', req.body);
-        console.log('Uploaded file:', req.file);
+function createQuestionsPdf(questions) {
+  return new Promise((resolve, reject) => {
+    const document = new PDFDocument({ margin: 54 });
+    const parts = [];
 
-        const { questionType, difficulty, numQuestions } = req.body;
-        
-        if (!fs.existsSync(filePath)) {
-            console.error('File does not exist:', filePath);
-            return res.status(500).send('Uploaded file not found');
-        }
+    document.on('data', (part) => parts.push(part));
+    document.on('end', () => resolve(Buffer.concat(parts)));
+    document.on('error', reject);
 
-        const questions = await generateQuestions(filePath, questionType, difficulty, numQuestions);
-
-        // Generate HTML from questions
-        const htmlContent = generateHtml(questions);
-        
-        // Convert HTML to PDF
-        pdf.create(htmlContent).toBuffer((err, buffer) => {
-            if (err) {
-                console.error('PDF generation failed:', err);
-                return res.status(500).send('PDF generation failed');
-            }
-            
-            res.contentType('application/pdf');
-            res.send(buffer);
-        });
-
-        // Clean up the uploaded file
-        fs.unlink(filePath, (err) => {
-            if (err) console.error('Error deleting file:', err);
-        });
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).send('An error occurred');
-    }
-};
-
-function generateHtml(questions) {
-    let html = '<h1>Generated Questions</h1>';
+    document.fontSize(20).text('Generated Questions', { align: 'center' });
     questions.forEach((question, index) => {
-        html += `<h2>Question ${index + 1}</h2>`;
-        html += `<p>${question}</p>`;
+      document.moveDown(1.2);
+      document.fontSize(13).text(`Question ${index + 1}`);
+      document.moveDown(0.35);
+      document.fontSize(11).text(question, { lineGap: 4 });
     });
-    return html;
+    document.end();
+  });
 }
+
+async function handleGenerateQuestions(req, res) {
+  const file = req.file;
+  const { questionType, difficulty, numQuestions } = req.body;
+
+  if (!file) return res.status(400).send('Upload a PDF file.');
+  if (!['mcq', 'short'].includes(questionType)) {
+    return res.status(400).send('Choose a supported question type.');
+  }
+  if (!['easy', 'medium', 'hard'].includes(difficulty)) {
+    return res.status(400).send('Choose a supported difficulty.');
+  }
+  if (!Number.isInteger(Number(numQuestions)) || Number(numQuestions) < 1 || Number(numQuestions) > 20) {
+    return res.status(400).send('Choose between 1 and 20 questions.');
+  }
+
+  try {
+    const questions = await generateQuestions(file.buffer, questionType, difficulty, Number(numQuestions));
+    const pdf = await createQuestionsPdf(questions);
+    return res.type('application/pdf').attachment('generated_questions.pdf').send(pdf);
+  } catch (error) {
+    console.error('Question generation failed:', error.message);
+    return res.status(500).send('Could not generate questions. Check the backend configuration and try again.');
+  }
+}
+
+module.exports = { createQuestionsPdf, generateQuestions: handleGenerateQuestions };

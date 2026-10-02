@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme, responsiveFontSizes } from '@mui/material/styles';
 import { CssBaseline, Box, Container } from '@mui/material';
@@ -10,14 +10,14 @@ import GradeSubmissions from './components/GradeSubmissions';
 const App = () => {
   const [darkMode, setDarkMode] = useState(() => {
     const savedMode = localStorage.getItem('darkMode');
-    return savedMode ? JSON.parse(savedMode) : false;
+    return savedMode === 'true';
   });
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(darkMode));
   }, [darkMode]);
 
-  let theme = createTheme({
+  const theme = useMemo(() => responsiveFontSizes(createTheme({
     palette: {
       mode: darkMode ? 'dark' : 'light',
       primary: {
@@ -55,9 +55,7 @@ const App = () => {
         },
       },
     },
-  });
-
-  theme = responsiveFontSizes(theme);
+  })), [darkMode]);
 
   return (
     <ThemeProvider theme={theme}>

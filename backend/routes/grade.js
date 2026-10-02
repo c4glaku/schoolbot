@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const gradeController = require('../controllers/gradeController');
-const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const uploadPdf = require('../lib/pdfUpload');
 
-router.post('/', upload.array('studentSubmissions'), gradeController.gradeSubmissions);
+router.post('/', uploadPdf.array('studentSubmissions', 5), gradeController.gradeSubmissions);
 
 module.exports = router;

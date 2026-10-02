@@ -21,7 +21,12 @@ const NavBar = ({ darkMode, setDarkMode }) => {
           <Button color="inherit" component={Link} to="/grade-submissions" sx={{ mr: 2 }}>
             Grade Submissions
           </Button>
-          <IconButton onClick={() => setDarkMode(!darkMode)} color="inherit">
+          <IconButton
+            onClick={() => setDarkMode(!darkMode)}
+            color="inherit"
+            aria-label={darkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-pressed={darkMode}
+          >
             {darkMode ? <Brightness7Icon /> : <Brightness4Icon />}
           </IconButton>
         </Box>
